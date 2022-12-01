@@ -55,38 +55,34 @@ def Get_BK_Data_TA(pd_df):
 
 def Get_BK_Data_YE(pd_df):
     
-    pages = range(0, 255, 15)
-
     try:
         i = max(pd_df.index)
     except ValueError as error:
         i = 0
 
-    for page in pages:
+    r = requests.get('https://www.yelp.com/biz/burger-king-london-28', headers={"User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36"})
+    
+    html_data = r.text
+    
+    soup = BeautifulSoup(html_data, "lxml")
+    #soup2 = soup.find_all("script", {"type":"application/ld+json"})
 
-        r = requests.get('https://www.yelp.com/biz/burger-king-london-28', headers={"User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36"})
+    reviews = soup.find_all("script", {"type":"application/ld+json"})
+    js_reviews = json.loads(reviews[2].string)
+    js_reviews = js_reviews.get("review")
+    #<script data-rh="true" type="application/ld+json"
+    
+    for review in js_reviews:
+
+        review_entry = review["description"]
+
+        review_date = review["datePublished"]
+        review_date = datetime.strptime(review_date, '%Y-%m-%d')
         
-        html_data = r.text
-        
-        soup = BeautifulSoup(html_data, "lxml")
-        #soup2 = soup.find_all("script", {"type":"application/ld+json"})
+        row = pd.DataFrame({'Date':[review_date], 'Review':[review_entry], 'Platform':["Yelp"]}, index=[i])
+        pd_df = pd.concat([pd_df, row])
 
-        reviews = soup.find_all("script", {"type":"application/ld+json"})
-        js_reviews = json.loads(reviews[2].string)
-        js_reviews = js_reviews.get("review")
-        #<script data-rh="true" type="application/ld+json"
-        
-        for review in js_reviews:
-
-            review_entry = review["description"]
-
-            review_date = review["datePublished"]
-            review_date = datetime.strptime(review_date, '%Y-%m-%d')
-            
-            row = pd.DataFrame({'Date':[review_date], 'Review':[review_entry], 'Platform':["Yelp"]}, index=[i])
-            pd_df = pd.concat([pd_df, row])
-
-            i += 1
+        i += 1
     
     return pd_df
 
